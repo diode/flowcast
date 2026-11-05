@@ -1,0 +1,47 @@
+# Glimmer test questions for Clearwater (docs/architecture-next.md 4.3), as tests/assist_questions.yaml: today =
+# Tuesday 2026-11-03. Windows 08:30-11:00, 12:30-15:00, 17:00-19:30, 20:30-23:00; other times are refused (no_change).
+today: 2026-11-03
+questions:
+  - q: Old Town to Riverside closed tomorrow 9am for an hour
+    expect: [{find_road: {}}, {set_road: {edge: C1_C2, level: closed, minutes: 60, date: 2026-11-04, time: "09:00"}}]
+  - q: What if the road from Riverside to Old Town jams at 17:30 tomorrow for 60 minutes?
+    expect: [{find_road: {}}, {set_road: {edge: C2_C1, level: jammed, minutes: 60, date: 2026-11-04, time: "17:30"}}]
+  - q: Close the road from Castle Hill to Kingsbridge for 90 minutes on Monday at 9:00. What is the impact?
+    expect: [{find_road: {}}, {set_road: {edge: J1_J10, level: closed, minutes: 90, date: 2026-11-09, time: "09:00"}}, {impact: {}}]
+  - q: Mill Quay to Riverside slow at 16:00 on Friday for an hour
+    no_change: true                   # 16:00: outside the filmed windows, refused
+  - q: How busy is Clearwater usually on Wednesday at 5:30pm?
+    expect: [{expected_state: {date: 2026-11-04, time: "17:30"}}]
+  - q: Is Saturday 7 November a working day?
+    expect: [{day_kind: {date: 2026-11-07}}]
+  - q: What's the way round if Southbank to Mill Quay is closed?
+    expect: [{find_road: {}}, {detour: {edge: J5_J6}}]
+  - q: Castle Hill to Old Town closed for an hour from 09:00 on 5 November - what should we do?
+    expect: [{find_road: {}}, {set_road: {edge: J1_C1, level: closed, minutes: 60, date: 2026-11-05, time: "09:00"}}, {actions: {}}]
+  - q: Has the road from Stadium to Riverside had incidents before?
+    expect: [{find_road: {}}, {history: {target: J8_C2}}]
+  - q: The road from Riverside into the Riverside neighbourhood is busy at 17:30 today for 30 minutes. Effect?
+    expect: [{find_road: {}}, {set_road: {edge: out_C2, level: busy, minutes: 30, date: 2026-11-03, time: "17:30"}}]
+  - q: Close Fairview to Southbank at 7am tomorrow for 30 minutes
+    no_change: true                   # 07:00: outside the filmed windows, refused
+  - q: Have there been incidents around Harbour Gate?
+    expect: [{find_junction: {}}, {history: {target: J3}}]
+  - q: Close Hillside Road tomorrow at 9am for an hour
+    no_change: true                   # no such road in Clearwater
+  # more road closures
+  - q: Close Riverside to Stadium tomorrow at 9:00 for an hour
+    expect: [{set_road: {edge: C2_J8, level: closed, minutes: 60, date: 2026-11-04, time: "09:00"}}]
+  - q: Roadworks will close Harbour Gate to Old Town on Thursday from 17:30 for 90 minutes. What happens?
+    expect: [{set_road: {edge: J3_C1, level: closed, minutes: 90, date: 2026-11-05, time: "17:30"}}]
+  # two or three roads at the same time
+  - q: Close Old Town to Riverside and Riverside to Old Town tomorrow at 9am for an hour
+    expect: [{set_road: {edge: C1_C2, level: closed, minutes: 60, date: 2026-11-04, time: "09:00", also: "C2_C1"}}]
+  - q: What if Castle Hill to Old Town, Westfield to Old Town and Fairview to Old Town are all closed tomorrow at 17:30 for 30 minutes?
+    expect: [{set_road: {edge: J1_C1, level: closed, minutes: 30, date: 2026-11-04, time: "17:30", also: "J2_C1,J4_C1"}}]
+  - q: Mill Quay to Riverside closed and Eastmoor to Riverside jammed on Friday at 9:00 for 45 minutes
+    expect: [{set_road: {edge: J6_C2, level: closed, minutes: 45, date: 2026-11-06, time: "09:00", also: "J7_C2"}}]
+  # heavier traffic on a road
+  - q: Heavy traffic on Stadium to Riverside tomorrow at 17:30 for an hour - what should we do?
+    expect: [{set_road: {edge: J8_C2, level: busy, minutes: 60, date: 2026-11-04, time: "17:30"}}]
+  - q: What if there is more traffic than usual from Kingsbridge to Castle Hill on Monday at 9:00 for 90 minutes?
+    expect: [{set_road: {edge: J10_J1, level: busy, minutes: 90, date: 2026-11-09, time: "09:00"}}]

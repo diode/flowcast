@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A made-up small town for the real-town tests (not a real place): High Street (E-W) crossing Mill Lane (N-S),
+     Station Road north from High Street, one-way Park Road between them; a residential street that is not kept. -->
+<osm version="0.6" generator="FlowCast test fixture">
+  <node id="1" lat="52.0000" lon="-0.0060"/>
+  <node id="2" lat="52.0000" lon="-0.0030"/>
+  <node id="3" lat="52.0000" lon="-0.0001"><tag k="highway" v="traffic_signals"/></node>
+  <node id="4" lat="52.0000" lon="0.0000"/>
+  <node id="5" lat="52.0000" lon="0.0020"/>
+  <node id="6" lat="52.0000" lon="0.0040"/>
+  <node id="7" lat="52.0000" lon="0.0060"/>
+  <node id="10" lat="51.9960" lon="0.0000"/>
+  <node id="11" lat="51.9980" lon="0.0000"/>
+  <node id="12" lat="52.0015" lon="0.0000"/>
+  <node id="13" lat="52.0030" lon="0.0000"/>
+  <node id="14" lat="52.0060" lon="0.0000"/>
+  <node id="20" lat="52.0015" lon="0.0040"/>
+  <node id="21" lat="52.0030" lon="0.0040"/>
+  <node id="22" lat="52.0060" lon="0.0040"/>
+  <node id="30" lat="52.0030" lon="0.0020"/>
+  <node id="40" lat="51.9990" lon="0.0020"/>
+  <node id="41" lat="51.9985" lon="0.0030"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="5"/><nd ref="6"/><nd ref="7"/>
+    <tag k="highway" v="primary"/><tag k="name" v="High Street"/><tag k="lanes" v="2"/><tag k="maxspeed" v="50"/>
+  </way>
+  <way id="101">
+    <nd ref="10"/><nd ref="11"/><nd ref="4"/><nd ref="12"/><nd ref="13"/><nd ref="14"/>
+    <tag k="highway" v="secondary"/><tag k="name" v="Mill Lane"/><tag k="maxspeed" v="30 mph"/>
+  </way>
+  <way id="102">
+    <nd ref="6"/><nd ref="20"/><nd ref="21"/><nd ref="22"/>
+    <tag k="highway" v="tertiary"/><tag k="name" v="Station Road"/>
+  </way>
+  <way id="103">
+    <nd ref="13"/><nd ref="30"/><nd ref="21"/>
+    <tag k="highway" v="tertiary"/><tag k="name" v="Park Road"/><tag k="oneway" v="yes"/>
+  </way>
+  <way id="104">
+    <nd ref="5"/><nd ref="40"/><nd ref="41"/>
+    <tag k="highway" v="residential"/><tag k="name" v="Orchard Close"/>
+  </way>
+</osm>

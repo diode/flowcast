@@ -1,0 +1,54 @@
+# A real town for FlowCast: copy to towns/<town>.yaml (the file name is the town's id; keep out_dir the same name),
+# fill in the map and the cameras, then follow the checklist in the technical view (Onboarding & ingest) or
+#   .venv\Scripts\netstudy status --sim-config towns/<town>.yaml
+# Nothing here runs SUMO or CARLA: the roads come from OpenStreetMap, the traffic from the cameras' recordings.
+name: Your Town                       # shown on the dashboard
+tagline: ""                           # optional, under the name
+out_dir: ../data/your_town            # relative to this file; the folder name must match this file's name
+sample_minutes: 5
+
+source:
+  kind: real                          # real: cameras' recordings (simulation: SUMO sample data)
+  inbox: ../data/your_town/inbox      # where recorders push files (a network share works: \\server\flowcast\your_town)
+  inbox_quiet_s: 10                   # a file counts as complete when unchanged this long
+  # inbox_marker: true                # or: only when <file>.done appears beside it
+
+network:
+  source: osm
+  osm:
+    file: ../data/your_town/network/map.osm   # openstreetmap.org > Export (or JOSM / Overpass), or set bbox + --fetch
+    # bbox: [52.195, 0.110, 52.215, 0.140]    # [south, west, north, east]; netstudy onboard --fetch downloads it
+    # highways: [trunk, primary, secondary, tertiary, trunk_link, primary_link, secondary_link, tertiary_link]
+    merge_m: 25                       # junction nodes closer than this are one junction
+    signal_m: 30                      # a traffic_signals node this close makes the junction signalised
+  lefthand: false                     # true where traffic keeps left (UK, India, Japan, ...)
+  view_m: 60                          # each camera measures this far up its approach from the stop line
+  names: {}                           # optional better names for junctions, by id from map.png: {J4: Market Square}
+
+recording:
+  windows: []                         # empty: the forecast answers for the whole day; or the hours the cameras record:
+  #   - {period: morning, start: "07:00", end: "10:00"}
+  #   - {period: evening, start: "16:00", end: "19:00"}
+
+ingest:
+  # gpu: 1                            # this town's SAM 3.1 card, if not the workspace's vision_gpu (workspace.yaml)
+  # pair_every_s: 12                  # a pair of frames read every 12 s of video (about 2.5 frames/s on a 12-16 GB GPU)
+
+cameras:                              # one per road direction it watches; ids as the recordings' file names use them
+  - id: cam01
+    name: High Street eastbound at Mill Lane
+    at: {lat: 52.20510, lon: 0.12115} # a point on the road it watches, near the stop line
+    heading: 90                       # the traffic's direction, degrees from north (90 = eastbound)
+    # edge: J7_J1                     # instead of at / heading: the edge id from map.png
+    # stop_m: 8                       # stop line this far before the junction centre
+    calibration:                      # 4+ points visible in the image and on the map (corners of road markings,
+      image_size: [1920, 1080]        # kerb ends, manhole covers); spread them over the measured zone
+      points:
+        - {px: [412, 980], lat: 52.20509, lon: 0.12108}
+        - {px: [1510, 965], lat: 52.20503, lon: 0.12109}
+        - {px: [1180, 420], lat: 52.20502, lon: 0.12061}
+        - {px: [760, 430], lat: 52.20511, lon: 0.12060}
+
+predict:
+  engine: graph
+  assist: glimmer                     # the model is chosen in the dashboard menu (Glimmer | Muse Spark); off: the form

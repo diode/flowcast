@@ -1,0 +1,136 @@
+# Five-junction town (SUMO only): a routine city centre (J2) and residential area (J1), three random
+# neighbourhoods.
+#   netstudy network  --sim-config sim/maple_falls.yaml
+#   netstudy simulate --sim-config sim/maple_falls.yaml
+#
+#       J4 ═══════════ J5
+#       ║ ╲           ╱ ║        spokes: J2-J1, J2-J3, J2-J4, J2-J5
+#       ║   ╲       ╱   ║        ring:   J1-J4, J4-J5, J5-J3, J3-J1    (all two-way: 8 roads, 16 edges)
+#       ║     ( J2 )    ║        each junction also has its own neighbourhood road (in_<J> / out_<J>);
+#       ║   ╱   ┊   ╲   ║        J2's points south, inside the ring
+#       ║ ╱     ┊     ╲ ║
+#       J1 ═══════════ J3        cameras: one per edge (26)
+out_dir: ../data/maple_falls          # relative to this file
+seed: 11
+sample_minutes: 5
+
+network:
+  source: town
+  lefthand: true                # India drives on the left
+  view_m: 60
+  cameras: all                  # all: every edge | approaches: edges ending at a junction | [edge ids]
+  town:
+    junctions:                  # id: [x, y] metres; cam01-05 watch in_J1..in_J5 in this order
+      J1: [0, 0]
+      J2: [450, 350]            # centre of the town (= mean of all junctions)
+      J3: [900, 0]
+      J4: [0, 700]
+      J5: [900, 700]
+    roads:                      # two-way roads between junctions
+      - [J2, J1]
+      - [J2, J3]
+      - [J2, J4]
+      - [J2, J5]
+      - [J1, J4]
+      - [J4, J5]
+      - [J5, J3]
+      - [J3, J1]
+    lanes: 2
+    speed_kmh: 40
+    fringe_m: 250               # each junction's neighbourhood road
+
+demand:
+  mix: {car: 0.30, two_wheeler: 0.45, auto_rickshaw: 0.12, bus: 0.05, truck: 0.08}
+  zones:
+    J2:                         # ROUTINE: city centre, offices + shops
+      kind: routine
+      name: City centre
+      peak_veh_per_hour: 700
+      day_to_day_sd: 0.05
+      generation:               # trips leaving the centre
+        - {from: "07:00", to: "09:00", level: 0.20, days: weekdays}
+        - {from: "09:00", to: "12:30", level: 0.35, days: weekdays}
+        - {from: "12:30", to: "14:00", level: 0.60, days: weekdays}   # lunch
+        - {from: "14:00", to: "17:00", level: 0.40, days: weekdays}
+        - {from: "17:00", to: "19:30", level: 1.00, days: weekdays}   # leaving office
+        - {from: "19:30", to: "22:00", level: 0.25, days: weekdays}
+        - {from: "10:00", to: "20:00", level: 0.20, days: weekend}
+      attraction:               # how strongly it draws trips
+        - {from: "07:30", to: "10:00", level: 1.00, days: weekdays}   # arriving at office
+        - {from: "10:00", to: "12:30", level: 0.45, days: weekdays}
+        - {from: "12:30", to: "14:00", level: 0.60, days: weekdays}
+        - {from: "14:00", to: "17:00", level: 0.40, days: weekdays}
+        - {from: "17:00", to: "20:00", level: 0.15, days: weekdays}
+        - {from: "10:00", to: "20:00", level: 0.15, days: weekend}
+    J1:                         # ROUTINE: residential area with a school
+      kind: routine
+      name: Residential + school
+      peak_veh_per_hour: 800
+      day_to_day_sd: 0.05
+      generation:
+        - {from: "06:30", to: "07:30", level: 0.50, days: weekdays}
+        - {from: "07:30", to: "09:30", level: 1.00, days: weekdays}   # office + school run
+        - {from: "09:30", to: "13:00", level: 0.35, days: weekdays}
+        - {from: "13:00", to: "15:00", level: 0.70, days: weekdays}   # school pick-up
+        - {from: "15:00", to: "17:00", level: 0.35, days: weekdays}
+        - {from: "17:00", to: "20:00", level: 0.50, days: weekdays}
+        - {from: "20:00", to: "22:00", level: 0.30, days: weekdays}
+        - {from: "09:00", to: "21:00", level: 0.40, days: weekend}
+      attraction:
+        - {from: "07:30", to: "08:30", level: 0.60, days: weekdays}   # school drop-off
+        - {from: "08:30", to: "13:30", level: 0.25, days: weekdays}
+        - {from: "13:30", to: "14:30", level: 0.60, days: weekdays}   # school pick-up
+        - {from: "14:30", to: "17:30", level: 0.35, days: weekdays}
+        - {from: "17:30", to: "20:30", level: 1.00, days: weekdays}   # coming home
+        - {from: "20:30", to: "23:00", level: 0.50, days: weekdays}
+        - {from: "09:00", to: "22:00", level: 0.40, days: weekend}
+    J3: &random                 # RANDOM: no daily pattern, surges at random times
+      kind: random
+      name: Mixed use (random)
+      peak_veh_per_hour: 600
+      base_range: [0.15, 0.6]   # the day's typical level, drawn per day
+      drift_phi: 0.95           # slow random drift (per 5 minutes)
+      drift_sd: 0.12
+      surges_per_day: 3         # markets, events, diversions ...
+      surge_minutes: [15, 120]
+      surge_factor: [1.5, 4.0]
+    J4:
+      <<: *random
+      name: Market (random)
+      peak_veh_per_hour: 500
+    J5:
+      <<: *random
+      name: Industrial / transit (random)
+      peak_veh_per_hour: 500
+      mix: {car: 0.20, two_wheeler: 0.30, auto_rickshaw: 0.10, bus: 0.05, truck: 0.35}
+
+incidents:
+  per_day: 0.5
+  duration_min: [20, 60]
+
+# Phase 2 (docs/phase2.md): paired runs, a clean weekday replayed with one road closed.
+propagation:
+  incidents:
+    edges: roads             # every road between junctions (16)
+    times: ["08:00", "17:30"]
+    duration_min: 30
+    block: 2                 # lanes blocked by stopped vehicles: 2 = road closed
+
+traffic:
+  start: 2026-10-01
+  days: 28
+  workers: 4
+
+state:                          # netstudy state --hide <scenario>: cameras hidden, their edges estimated
+  scenarios:
+    spokes_in: [J1_J2, J3_J2, J4_J2, J5_J2]
+    one_direction: [J2_J1, J2_J3, J2_J4, J2_J5, J1_J4, J4_J5, J5_J3, J3_J1]
+    half_roads: [J2_J4, J4_J2, J1_J4, J4_J1, J5_J3, J3_J5, J3_J1, J1_J3]
+
+# Phase 4 (docs/phase4.md): what-if scenarios, `netstudy whatif --scenario <name>`.
+whatif:
+  days: 5                       # weekdays of the 28-day run without a random incident, in turn
+  scenarios:
+    close_J1_J2_am: {kind: closure, edge: J1_J2, from: "07:30", to: "09:00"}
+    close_J2_J3_pm: {kind: closure, edge: J2_J3, from: "17:00", to: "18:30"}
+    centre_growth:  {kind: demand, zone: J2, factor: 1.3}

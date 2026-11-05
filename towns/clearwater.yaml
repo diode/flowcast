@@ -1,0 +1,321 @@
+# Clearwater: the large study city (docs/cities.md). Ten junctions and two city centres, right-hand traffic.
+#   netstudy network --sim-config towns/clearwater.yaml
+#
+#       J2 ─── J1 ═══════════════ J10 ─── J9
+#      ╱   ╲   │ ╲               ╱ │   ╱   ╲          spokes: 5 per centre (550 m)
+#    J3 ── C1 Old Town ════ C2 Riverside ── J8        rings round each centre on its outer side
+#      ╲   ╱   │ ╱               ╲ │   ╲   ╱          north link J1-J10, south link J5-J6
+#       J4 ─── J5 ═══════════════ J6 ─── J7           central avenue C1-C2 (1,400 m)
+#
+# J1-J5 and J6-J10 are not joined on the avenue side (that road would cross the avenue without a junction).
+# Run as Brookhaven (docs/implementation-next.md step 5):
+#   netstudy run --sim-config towns/clearwater.yaml --first 2026-10-05 --days 30
+out_dir: ../data/clearwater
+seed: 23
+sample_minutes: 5
+
+source:
+  kind: simulation
+  capture: recorded
+  skip_render_read: true              # simulation: SUMO writes the labels instead of people
+  render_days: 1                      # simulation: render the first day (CARLA + vision); the rest in SUMO alone
+  render_cameras: 3                   # the rendered day films 3 cameras picked at random (seed); the rest direct from SUMO
+
+recording:                            # docs/recording.md; 3 cameras filmed on the rendered day
+  fps: 5
+  segment_s: 60
+  windows:
+    # 2.5 h each (since 2026-11-04; was 08:00-08:30, 17:30-18:00, 21:00-21:15). The days after the rendered one
+    # come from SUMO (direct observations, the whole day), so these only bound Predict and the period buttons; the
+    # rendered day was filmed in the old windows and a new rendering would take about 10 h per day.
+    - {period: morning, start: "08:30", end: "11:00", light: morning}
+    - {period: noon, start: "12:30", end: "15:00", light: noon}
+    - {period: evening, start: "17:00", end: "19:30", light: evening}
+    - {period: night, start: "20:30", end: "23:00", light: night}
+  exposure:                           # Ashford's calibration (same CARLA lights); recheck: check_carla_world.py --calibrate
+    morning: {exposure_compensation: -0.5}
+    noon: {exposure_compensation: -0.5}
+    evening: {exposure_compensation: 1.5}
+    night: {exposure_compensation: 0.0, exposure_min_bright: 4.0, exposure_max_bright: 4.0}
+
+network:
+  source: town
+  lefthand: false
+  opendrive: true
+  view_m: 60
+  cameras: all
+  town:
+    junctions:
+      C1: [-700, 0]
+      C2: [700, 0]
+      J1: [-425, 476]                 # round C1 at 550 m: 60, 120, 180, 240, 300 degrees
+      J2: [-975, 476]
+      J3: [-1250, 0]
+      J4: [-975, -476]
+      J5: [-425, -476]
+      J6: [425, -476]                 # round C2 at 550 m: 240, 300, 0, 60, 120 degrees
+      J7: [975, -476]
+      J8: [1250, 0]
+      J9: [975, 476]
+      J10: [425, 476]
+    roads:
+      - [C1, J1]
+      - [C1, J2]
+      - [C1, J3]
+      - [C1, J4]
+      - [C1, J5]
+      - [C2, J6]
+      - [C2, J7]
+      - [C2, J8]
+      - [C2, J9]
+      - [C2, J10]
+      - [J1, J2]
+      - [J2, J3]
+      - [J3, J4]
+      - [J4, J5]
+      - [J6, J7]
+      - [J7, J8]
+      - [J8, J9]
+      - [J9, J10]
+      - [J1, J10]                     # north link
+      - [J5, J6]                      # south link
+      - [C1, C2]                      # central avenue
+    lanes: 2
+    speed_kmh: 50
+    fringe_m: 250
+    neighbourhoods:
+      C1: {dir: [-0.866, 0.5], length_m: 150}    # between the J2 and J3 spokes
+      C2: {dir: [0.866, 0.5], length_m: 150}     # between the J8 and J9 spokes
+    names: {C1: Old Town, C2: Riverside, J1: Castle Hill, J2: Westfield, J3: Harbour Gate, J4: Fairview,
+            J5: Southbank, J6: Mill Quay, J7: Eastmoor, J8: Stadium, J9: Northpark, J10: Kingsbridge}
+    # Timing sheet (docs/architecture-next.md 5.1), decoded once from netconvert's plans in net.net.xml by
+    # scripts/decode_signals.py (4 Nov 2026); from now on this is the source: netstudy network gives it to SUMO
+    # and the graph model reads it. Movement <from>><to> by neighbouring junction, hood = in_/out_<J>.
+    signals:
+      C1:
+        phases:
+          - {green_s: 11, amber_s: 3, go: [C2>J1, C2>J2, C2>J3, C2>hood, J3>C2, J3>J4, J3>J5], yield: [C2>J4, C2>J5, J3>J1, J3>J2, J3>hood]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [C2>J4, C2>J5, J3>J1, J3>J2, J3>hood]}
+          - {green_s: 12, amber_s: 3, go: [J1>J2, J1>J3, J1>J4, J1>hood, J4>C2, J4>J1, J4>J5], yield: [J1>C2, J1>J5, J4>J2, J4>J3, J4>hood]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [J1>C2, J1>J5, J4>J2, J4>J3, J4>hood]}
+          - {green_s: 12, amber_s: 3, go: [J2>J3, J2>J4, J2>J5, J2>hood, J5>C2, J5>J1, J5>J2], yield: [J2>C2, J2>J1, J5>J3, J5>J4, J5>hood]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [J2>C2, J2>J1, J5>J3, J5>J4, J5>hood]}
+          - {green_s: 12, amber_s: 3, all_red_s: 1, go: [J2>hood, hood>C2, hood>J1, hood>J2, hood>J3, hood>J4, hood>J5]}
+      C2:
+        phases:
+          - {green_s: 11, amber_s: 3, go: [C1>J6, C1>J7, C1>J8, J8>C1, J8>J10, J8>J9, J8>hood], yield: [C1>J10, C1>J9, C1>hood, J8>J6, J8>J7]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [C1>J10, C1>J9, C1>hood, J8>J6, J8>J7]}
+          - {green_s: 12, amber_s: 3, go: [J6>J7, J6>J8, J6>J9, J6>hood, J9>C1, J9>J10, J9>J6], yield: [J6>C1, J6>J10, J9>J7, J9>J8, J9>hood]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [J6>C1, J6>J10, J9>J7, J9>J8, J9>hood]}
+          - {green_s: 12, amber_s: 3, go: [J10>C1, J10>J6, J10>J7, J7>J10, J7>J8, J7>J9, J7>hood], yield: [J10>J8, J10>J9, J10>hood, J7>C1, J7>J6]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [J10>J8, J10>J9, J10>hood, J7>C1, J7>J6]}
+          - {green_s: 12, amber_s: 3, all_red_s: 1, go: [J8>hood, hood>C1, hood>J10, hood>J6, hood>J7, hood>J8, hood>J9]}
+      J1:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [J10>J2, J10>hood, J2>C1, J2>J10], yield: [J10>C1, J2>hood]}
+          - {green_s: 37, amber_s: 3, go: [C1>J10, C1>hood, hood>C1, hood>J2], yield: [C1>J2, hood>J10]}
+          - {green_s: 6, amber_s: 3, go: [C1>J2, hood>J10]}
+      J10:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [J1>C2, J1>J9, J9>J1, J9>hood], yield: [J1>hood, J9>C2]}
+          - {green_s: 37, amber_s: 3, go: [C2>J9, C2>hood, hood>C2, hood>J1], yield: [C2>J1, hood>J9]}
+          - {green_s: 6, amber_s: 3, go: [C2>J1, hood>J9]}
+      J2:
+        phases:
+          - {green_s: 24, go: [J1>hood, hood>C1, hood>J1, hood>J3], yield: [J1>C1, J1>J3]}
+          - {green_s: 3, go: [J1>hood], yield: [J1>C1, J1>J3]}
+          - {green_s: 6, amber_s: 3, go: [J1>C1, J1>J3, J1>hood]}
+          - {green_s: 24, go: [J3>C1, J3>J1, J3>hood, hood>J3]}
+          - {green_s: 3, go: [J3>C1]}
+          - {green_s: 24, amber_s: 3, go: [C1>J1, C1>J3, C1>hood, J3>C1]}
+      J3:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C1>J2, C1>hood, hood>C1, hood>J4], yield: [C1>J4, hood>J2]}
+          - {green_s: 37, amber_s: 3, go: [J2>J4, J2>hood, J4>C1, J4>J2], yield: [J2>C1, J4>hood]}
+          - {green_s: 6, amber_s: 3, go: [J2>C1, J4>hood]}
+      J4:
+        phases:
+          - {green_s: 24, go: [J5>C1, J5>J3, J5>hood, hood>J5], yield: [hood>C1, hood>J3]}
+          - {green_s: 3, go: [hood>J5], yield: [hood>C1, hood>J3]}
+          - {green_s: 6, amber_s: 3, go: [hood>C1, hood>J3, hood>J5]}
+          - {green_s: 24, go: [C1>J3, J3>C1, J3>J5, J3>hood]}
+          - {green_s: 3, go: [C1>J3]}
+          - {green_s: 24, go: [C1>J3, C1>J5, C1>hood, J5>C1]}
+          - {green_s: 3, go: [J5>C1]}
+      J5:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [J4>J6, J4>hood, J6>C1, J6>J4], yield: [J4>C1, J6>hood]}
+          - {green_s: 37, amber_s: 3, go: [C1>J4, C1>hood, hood>C1, hood>J6], yield: [C1>J6, hood>J4]}
+          - {green_s: 6, amber_s: 3, go: [C1>J6, hood>J4]}
+      J6:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [J5>J7, J5>hood, J7>C2, J7>J5], yield: [J5>C2, J7>hood]}
+          - {green_s: 37, amber_s: 3, go: [C2>J5, C2>hood, hood>C2, hood>J7], yield: [C2>J7, hood>J5]}
+          - {green_s: 6, amber_s: 3, go: [C2>J7, hood>J5]}
+      J7:
+        phases:
+          - {green_s: 24, go: [J6>hood, hood>C2, hood>J6, hood>J8], yield: [J6>C2, J6>J8]}
+          - {green_s: 3, go: [J6>hood], yield: [J6>C2, J6>J8]}
+          - {green_s: 6, amber_s: 3, go: [J6>C2, J6>J8, J6>hood]}
+          - {green_s: 24, go: [J8>C2, J8>J6, J8>hood, hood>J8]}
+          - {green_s: 3, go: [J8>C2]}
+          - {green_s: 24, amber_s: 3, go: [C2>J6, C2>J8, C2>hood, J8>C2]}
+      J8:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C2>J7, C2>hood, hood>C2, hood>J9], yield: [C2>J9, hood>J7]}
+          - {green_s: 37, amber_s: 3, go: [J7>J9, J7>hood, J9>C2, J9>J7], yield: [J7>C2, J9>hood]}
+          - {green_s: 6, amber_s: 3, go: [J7>C2, J9>hood]}
+      J9:
+        phases:
+          - {green_s: 24, go: [J10>C2, J10>J8, J10>hood, hood>J10], yield: [hood>C2, hood>J8]}
+          - {green_s: 3, go: [hood>J10], yield: [hood>C2, hood>J8]}
+          - {green_s: 6, amber_s: 3, go: [hood>C2, hood>J10, hood>J8]}
+          - {green_s: 24, go: [C2>J8, J8>C2, J8>J10, J8>hood]}
+          - {green_s: 3, go: [C2>J8]}
+          - {green_s: 24, go: [C2>J10, C2>J8, C2>hood, J10>C2]}
+          - {green_s: 3, go: [J10>C2]}
+
+demand:                               # docs/cities.md: Clearwater's zones (two centres pulling at different times)
+  mix: {car: 0.65, two_wheeler: 0.20, bus: 0.05, truck: 0.10}
+  zones:
+    C1:                               # ROUTINE: Old Town, shops + tourism, evening peak
+      kind: routine
+      name: Old Town
+      peak_veh_per_hour: 700
+      day_to_day_sd: 0.06
+      generation:
+        - {from: "08:00", to: "11:00", level: 0.20, days: weekdays}
+        - {from: "11:00", to: "16:00", level: 0.40, days: weekdays}
+        - {from: "16:00", to: "18:00", level: 0.60, days: weekdays}
+        - {from: "18:00", to: "21:30", level: 1.00, days: weekdays}
+        - {from: "10:00", to: "22:00", level: 0.60, days: weekend}
+      attraction:
+        - {from: "09:00", to: "12:00", level: 0.40, days: weekdays}
+        - {from: "12:00", to: "16:00", level: 0.50, days: weekdays}
+        - {from: "16:00", to: "20:00", level: 1.00, days: weekdays}
+        - {from: "20:00", to: "22:00", level: 0.40, days: weekdays}
+        - {from: "10:00", to: "21:00", level: 0.80, days: weekend}
+    C2:                               # ROUTINE: Riverside offices, sharp morning and evening peaks
+      kind: routine
+      name: Riverside
+      peak_veh_per_hour: 900
+      day_to_day_sd: 0.05
+      ramp_minutes: 15
+      generation:
+        - {from: "08:00", to: "16:30", level: 0.15, days: weekdays}
+        - {from: "16:30", to: "18:30", level: 1.00, days: weekdays}
+        - {from: "18:30", to: "20:00", level: 0.25, days: weekdays}
+        - {from: "10:00", to: "18:00", level: 0.10, days: weekend}
+      attraction:
+        - {from: "07:30", to: "09:15", level: 1.00, days: weekdays}
+        - {from: "09:15", to: "16:30", level: 0.20, days: weekdays}
+        - {from: "16:30", to: "19:00", level: 0.10, days: weekdays}
+        - {from: "10:00", to: "18:00", level: 0.10, days: weekend}
+    J1: &homes                        # ROUTINE: homes
+      kind: routine
+      name: Castle Hill
+      peak_veh_per_hour: 500
+      day_to_day_sd: 0.05
+      generation:
+        - {from: "06:30", to: "07:30", level: 0.50, days: weekdays}
+        - {from: "07:30", to: "09:30", level: 1.00, days: weekdays}
+        - {from: "09:30", to: "16:00", level: 0.30, days: weekdays}
+        - {from: "16:00", to: "20:00", level: 0.45, days: weekdays}
+        - {from: "20:00", to: "22:00", level: 0.25, days: weekdays}
+        - {from: "09:00", to: "21:00", level: 0.40, days: weekend}
+      attraction:
+        - {from: "07:30", to: "09:00", level: 0.30, days: weekdays}
+        - {from: "09:00", to: "16:30", level: 0.25, days: weekdays}
+        - {from: "16:30", to: "20:30", level: 1.00, days: weekdays}
+        - {from: "20:30", to: "23:00", level: 0.50, days: weekdays}
+        - {from: "09:00", to: "22:00", level: 0.40, days: weekend}
+    J2:                               # ROUTINE: homes
+      <<: *homes
+      name: Westfield
+      peak_veh_per_hour: 450
+    J3: &market                       # RANDOM: market
+      kind: random
+      name: Harbour Gate
+      peak_veh_per_hour: 400
+      base_range: [0.15, 0.6]
+      drift_phi: 0.95
+      drift_sd: 0.12
+      surges_per_day: 3
+      surge_minutes: [15, 120]
+      surge_factor: [1.5, 4.0]
+      mix: {car: 0.65, two_wheeler: 0.25, bus: 0.05, truck: 0.05}
+    J4:                               # ROUTINE: schools (drop-off and pick-up)
+      kind: routine
+      name: Fairview
+      peak_veh_per_hour: 450
+      day_to_day_sd: 0.05
+      ramp_minutes: 15
+      generation:
+        - {from: "08:15", to: "09:00", level: 1.00, days: weekdays}
+        - {from: "15:00", to: "15:45", level: 1.00, days: weekdays}
+        - {from: "09:00", to: "15:00", level: 0.15, days: weekdays}
+        - {from: "10:00", to: "18:00", level: 0.20, days: weekend}
+      attraction:
+        - {from: "07:45", to: "08:30", level: 1.00, days: weekdays}
+        - {from: "14:30", to: "15:15", level: 1.00, days: weekdays}
+        - {from: "09:00", to: "14:30", level: 0.15, days: weekdays}
+        - {from: "10:00", to: "18:00", level: 0.20, days: weekend}
+    J5: &industry                     # RANDOM: industry, more trucks
+      <<: *market
+      name: Southbank
+      peak_veh_per_hour: 400
+      mix: {car: 0.45, two_wheeler: 0.10, bus: 0.05, truck: 0.40}
+    J6:                               # RANDOM: industry, more trucks
+      <<: *industry
+      name: Mill Quay
+      peak_veh_per_hour: 450
+    J7:                               # ROUTINE: homes
+      <<: *homes
+      name: Eastmoor
+      peak_veh_per_hour: 550
+    J8:                               # RANDOM: stadium (few, large surges)
+      <<: *market
+      name: Stadium
+      peak_veh_per_hour: 400
+      base_range: [0.05, 0.25]
+      surges_per_day: 1
+      surge_minutes: [60, 150]
+      surge_factor: [3.0, 6.0]
+      mix: {car: 0.70, two_wheeler: 0.20, bus: 0.10, truck: 0.00}
+    J9:                               # ROUTINE: hospital, busy all day (shifts at 07:00, 15:00, 23:00)
+      kind: routine
+      name: Northpark
+      peak_veh_per_hour: 400
+      day_to_day_sd: 0.04
+      base_level: 0.35
+      generation:
+        - {from: "06:30", to: "07:30", level: 0.70}
+        - {from: "14:30", to: "15:30", level: 1.00}
+        - {from: "22:30", to: "23:30", level: 0.60}
+      attraction:
+        - {from: "06:30", to: "07:30", level: 1.00}
+        - {from: "09:00", to: "18:00", level: 0.60}
+        - {from: "14:30", to: "15:30", level: 0.80}
+        - {from: "22:30", to: "23:30", level: 0.50}
+    J10:                              # RANDOM: market
+      <<: *market
+      name: Kingsbridge
+      peak_veh_per_hour: 450
+
+incidents:
+  per_day: 0.8
+  duration_min: [20, 60]
+
+whatif_labels:                        # simulation only: paired SUMO runs, the answer key for road changes (scoring only)
+  days: 3                             # the last N working days (the graph model is fitted on the days before them)
+  cases:                              # all inside the filmed windows (Predict refuses other times)
+    - {edge: C1_C2, level: closed, start: "08:00", minutes: 60}   # central avenue, morning (to the offices)
+    - {edge: C2_C1, level: jammed, start: "17:30", minutes: 60}   # central avenue, evening (to the Old Town)
+    - {edge: J1_C1, level: closed, start: "08:00", minutes: 60}   # Castle Hill -> Old Town
+    - {edge: J1_J10, level: closed, start: "08:00", minutes: 90}  # north link, detour by the avenue
+    - {edge: J6_C2, level: slow, start: "17:30", minutes: 60}     # Mill Quay -> Riverside
+    - {edge: out_C2, level: busy, start: "17:30", minutes: 30}    # no way round
+
+predict:                              # architecture-next 1.6
+  engine: graph                       # graph | sumo (refused: SUMO only makes sample data)
+  assist: glimmer                     # glimmer (local) | muse_spark (Meta Model API) | off (the form only); menu chooses

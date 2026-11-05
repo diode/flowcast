@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netstudy"
+version = "0.1.0"
+description = "Traffic behaviour and impact across a connected set of junctions, studied as a graph"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26", "pandas>=2.1", "pyyaml>=6.0",
+  "scikit-learn>=1.4", "scipy>=1.11",          # estimation, detection, forecast (phase 3 uses v1's gbm)
+  "matplotlib>=3.8",                           # check charts
+  # SUMO binaries + Python APIs
+  "eclipse-sumo>=1.20", "sumolib>=1.20", "traci>=1.20", "libsumo>=1.20",
+  "streamlit>=1.35", "plotly>=5.20",           # network dashboard (phase 5)
+  "streamlit-echarts==0.4.0",                  # city overview charts (0.7.0 fails to load on Streamlit 1.66)
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+netstudy = "netstudy.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

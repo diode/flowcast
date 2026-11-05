@@ -1,0 +1,50 @@
+# Glimmer test questions for Brookhaven (docs/architecture-next.md 4.3), as tests/assist_questions.yaml: today =
+# Tuesday 2026-11-03. Windows 08:30-11:00, 12:30-15:00, 17:00-19:30, 20:30-23:00; other times are refused (no_change).
+today: 2026-11-03
+questions:
+  - q: Hillside to Brookhaven Centre jammed tomorrow 9am for an hour
+    expect: [{find_road: {}}, {set_road: {edge: J1_C, level: jammed, minutes: 60, date: 2026-11-04, time: "09:00"}}]
+  - q: What if the road from Brookhaven Centre to Station Quarter is closed at 17:30 tomorrow for 60 minutes?
+    expect: [{find_road: {}}, {set_road: {edge: C_J2, level: closed, minutes: 60, date: 2026-11-04, time: "17:30"}}]
+  - q: Close the road from Hillside to Station Quarter for 90 minutes on Monday at 9:00. What is the impact?
+    expect: [{find_road: {}}, {set_road: {edge: J1_J2, level: closed, minutes: 90, date: 2026-11-09, time: "09:00"}}, {impact: {}}]
+  - q: Southfield to Brookhaven Centre slow at 12:00 on Friday for an hour
+    no_change: true                   # 12:00: outside the filmed windows, refused
+  - q: How busy is Brookhaven usually on Wednesday at 9am?
+    expect: [{expected_state: {date: 2026-11-04, time: "09:00"}}]
+  - q: What kind of day is 25 December?
+    expect: [{day_kind: {date: 2026-12-25}}]
+  - q: What's the way round if Old Mill to Lakeview is closed?
+    expect: [{find_road: {}}, {detour: {edge: J4_J5}}]
+  - q: Lakeview to Hillside busy for 45 minutes tomorrow at 17:30 - what should we do?
+    expect: [{find_road: {}}, {set_road: {edge: J5_J1, level: busy, minutes: 45, date: 2026-11-04, time: "17:30"}}, {actions: {}}]
+  - q: Has the road from Old Mill to Brookhaven Centre had incidents before?
+    expect: [{find_road: {}}, {history: {target: J4_C}}]
+  - q: Which is worse tomorrow at 9, Hillside to Brookhaven Centre jammed for 60 minutes or closed for 30?
+    expect: [{find_road: {}}, {set_road: {edge: J1_C, level: jammed, minutes: 60, date: 2026-11-04, time: "09:00"}},
+             {set_road: {edge: J1_C, level: closed, minutes: 30, date: 2026-11-04, time: "09:00"}}]
+  - q: Close Station Quarter to Southfield at 8pm tomorrow for 30 minutes
+    no_change: true                   # 20:00: outside the filmed windows, refused
+  - q: What happens if traffic from Old Mill into the Old Mill neighbourhood jams at 9:15 tomorrow for one hour?
+    expect: [{find_road: {}}, {set_road: {edge: out_J4, level: jammed, minutes: 60, date: 2026-11-04, time: "09:15"}}]
+  - q: Have there been incidents around Southfield?
+    expect: [{find_junction: {}}, {history: {target: J3}}]
+  - q: Close Riverside Road tomorrow at 9am for an hour
+    no_change: true                   # no such road in Brookhaven
+  # more road closures
+  - q: Close Southfield to Old Mill tomorrow at 9:00 for an hour
+    expect: [{set_road: {edge: J3_J4, level: closed, minutes: 60, date: 2026-11-04, time: "09:00"}}]
+  - q: Roadworks will close Lakeview to Brookhaven Centre on Thursday from 17:30 for 90 minutes. What happens?
+    expect: [{set_road: {edge: J5_C, level: closed, minutes: 90, date: 2026-11-05, time: "17:30"}}]
+  # two or three roads at the same time
+  - q: Close Hillside to Brookhaven Centre and Station Quarter to Brookhaven Centre tomorrow at 9am for an hour
+    expect: [{set_road: {edge: J1_C, level: closed, minutes: 60, date: 2026-11-04, time: "09:00", also: "J2_C"}}]
+  - q: What if Old Mill to Brookhaven Centre, Southfield to Brookhaven Centre and Lakeview to Brookhaven Centre are all closed tomorrow at 17:30 for 30 minutes?
+    expect: [{set_road: {edge: J4_C, level: closed, minutes: 30, date: 2026-11-04, time: "17:30", also: "J3_C,J5_C"}}]
+  - q: Brookhaven Centre to Hillside closed and Hillside to Station Quarter jammed on Friday at 9:00 for 45 minutes
+    expect: [{set_road: {edge: C_J1, level: closed, minutes: 45, date: 2026-11-06, time: "09:00", also: "J1_J2"}}]
+  # heavier traffic on a road
+  - q: Heavy traffic on Station Quarter to Southfield tomorrow at 17:30 for an hour - what should we do?
+    expect: [{set_road: {edge: J2_J3, level: busy, minutes: 60, date: 2026-11-04, time: "17:30"}}]
+  - q: What if there is more traffic than usual from Lakeview to Hillside on Monday at 9:00 for 90 minutes?
+    expect: [{set_road: {edge: J5_J1, level: busy, minutes: 90, date: 2026-11-09, time: "09:00"}}]

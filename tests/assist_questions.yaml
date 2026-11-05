@@ -1,0 +1,79 @@
+# Glimmer test questions (docs/architecture-next.md 4.3): Ashford, today = Tuesday 2026-11-03.
+# expect: the calls that must be made, with these arguments (find_road / find_junction: the name only, any text).
+#   A question matches when every expected call is made and no road change (set_road) runs that is not expected.
+#   no_change: true -> no set_road may succeed (refused or impossible).
+# Windows (towns/ashford.yaml recording.windows): 08:30-11:00, 12:30-15:00, 17:00-19:30, 20:30-23:00; other times are
+# refused (implementation-next step 4), so those questions expect no change.
+today: 2026-11-03
+questions:
+  - q: Elm Park to Ashford Centre jammed tomorrow 9am for an hour
+    expect: [{find_road: {}}, {set_road: {edge: J1_C, level: jammed, minutes: 60, date: 2026-11-04, time: "09:00"}}]
+  - q: What if the road from Ashford Centre to Mill Yard is closed at 17:30 tomorrow for 60 minutes?
+    expect: [{find_road: {}}, {set_road: {edge: C_J2, level: closed, minutes: 60, date: 2026-11-04, time: "17:30"}}]
+  - q: Close the road from Elm Park to Mill Yard for 90 minutes on Monday at 9:00. What is the impact?
+    expect: [{find_road: {}}, {set_road: {edge: J1_J2, level: closed, minutes: 90, date: 2026-11-09, time: "09:00"}}, {impact: {}}]
+  - q: Northgate to Ashford Centre slow at 12:00 on Friday for an hour
+    no_change: true                   # 12:00: outside the filmed windows, refused
+  - q: How busy is the town usually on Wednesday at 9am?
+    expect: [{expected_state: {date: 2026-11-04, time: "09:00"}}]
+  - q: What kind of day is 25 December?
+    expect: [{day_kind: {date: 2026-12-25}}]
+  - q: Is Sunday 8 November a normal day for traffic?
+    expect: [{day_kind: {date: 2026-11-08}}]
+  - q: What's the way round if Mill Yard to Northgate is closed?
+    expect: [{find_road: {}}, {detour: {edge: J2_J3}}]
+  - q: Northgate to Elm Park busy for 45 minutes tomorrow at 16:30 - what should we do?
+    no_change: true                   # 16:30: outside the filmed windows, refused
+  - q: Has the road from Elm Park to Ashford Centre had incidents before?
+    expect: [{find_road: {}}, {history: {target: J1_C}}]
+  - q: Which is worse tomorrow at 9, Elm Park to Ashford Centre jammed for 60 minutes or closed for 30?
+    expect: [{find_road: {}}, {set_road: {edge: J1_C, level: jammed, minutes: 60, date: 2026-11-04, time: "09:00"}},
+             {set_road: {edge: J1_C, level: closed, minutes: 30, date: 2026-11-04, time: "09:00"}}]
+  - q: The road from Ashford Centre into the Ashford Centre neighbourhood is busy at 4:30pm today for 30 minutes. Effect?
+    no_change: true                   # 16:30: outside the filmed windows, refused
+  - q: Close Ashford Centre to Elm Park for 2 hours on 10 November from 7:30
+    no_change: true                   # 07:30: outside the filmed windows, refused
+  - q: Expected traffic on Saturday at noon from Elm Park to Ashford Centre
+    no_change: true                   # 12:00: outside the filmed windows, refused
+  - q: Mill Yard to Ashford Centre jammed for 3 hours tomorrow at 9
+    no_change: true
+  - q: Close the road from Elm Park to Northgate at 8pm tomorrow for 30 minutes
+    no_change: true                   # 20:00: outside the filmed windows, refused
+  - q: What happens if traffic from Northgate into the Northgate neighbourhood jams at 9:15 tomorrow for one hour?
+    expect: [{find_road: {}}, {set_road: {edge: out_J3, level: jammed, minutes: 60, date: 2026-11-04, time: "09:15"}}]
+  - q: What actions are needed if Ashford Centre to Northgate is closed for an hour from 09:00 on 5 November?
+    expect: [{find_road: {}}, {set_road: {edge: C_J3, level: closed, minutes: 60, date: 2026-11-05, time: "09:00"}}, {actions: {}}]
+  - q: Have there been incidents around Northgate?
+    expect: [{find_junction: {}}, {history: {target: J3}}]
+  - q: Close Hillcrest Road tomorrow at 9am for an hour
+    no_change: true
+  # inside the windows: the road changes of the refused questions above
+  - q: Northgate to Elm Park busy for 45 minutes tomorrow at 17:30 - what should we do?
+    expect: [{find_road: {}}, {set_road: {edge: J3_J1, level: busy, minutes: 45, date: 2026-11-04, time: "17:30"}}, {actions: {}}]
+  - q: The road from Ashford Centre into the Ashford Centre neighbourhood is busy at 17:30 today for 30 minutes. Effect?
+    expect: [{find_road: {}}, {set_road: {edge: out_C, level: busy, minutes: 30, date: 2026-11-03, time: "17:30"}}]
+  - q: Close Ashford Centre to Elm Park for 2 hours on 10 November from 9:00
+    expect: [{find_road: {}}, {set_road: {edge: C_J1, level: closed, minutes: 120, date: 2026-11-10, time: "09:00"}}]
+  # more road closures
+  - q: Close Mill Yard to Northgate tomorrow at 9:00 for 90 minutes
+    expect: [{set_road: {edge: J2_J3, level: closed, minutes: 90, date: 2026-11-04, time: "09:00"}}]
+  - q: Roadworks will close Northgate to Ashford Centre on Thursday from 17:30 for an hour. What happens?
+    expect: [{set_road: {edge: J3_C, level: closed, minutes: 60, date: 2026-11-05, time: "17:30"}}]
+  - q: What if Ashford Centre to Elm Park is closed at 21:00 tomorrow for 30 minutes?
+    expect: [{set_road: {edge: C_J1, level: closed, minutes: 30, date: 2026-11-04, time: "21:00"}}]
+  # two or three roads at the same time (also: the other roads, any order)
+  - q: Close Elm Park to Ashford Centre and Elm Park to Mill Yard tomorrow at 9am for an hour
+    expect: [{set_road: {edge: J1_C, level: closed, minutes: 60, date: 2026-11-04, time: "09:00", also: "J1_J2"}}]
+  - q: What if Northgate to Ashford Centre and Mill Yard to Ashford Centre are both closed on Friday at 17:30 for 45 minutes?
+    expect: [{set_road: {edge: J3_C, level: closed, minutes: 45, date: 2026-11-06, time: "17:30", also: "J2_C"}}]
+  - q: Close Elm Park to Ashford Centre, Northgate to Ashford Centre and Mill Yard to Ashford Centre tomorrow at 17:30 for 30 minutes
+    expect: [{set_road: {edge: J1_C, level: closed, minutes: 30, date: 2026-11-04, time: "17:30", also: "J3_C,J2_C"}}]
+  - q: Mill Yard to Ashford Centre closed and Northgate to Mill Yard jammed tomorrow at 9:00 for an hour
+    expect: [{set_road: {edge: J2_C, level: closed, minutes: 60, date: 2026-11-04, time: "09:00", also: "J3_J2"}}]
+  # heavier traffic on a road (level busy)
+  - q: Heavy traffic on Mill Yard to Ashford Centre tomorrow at 17:30 for an hour - what should we do?
+    expect: [{set_road: {edge: J2_C, level: busy, minutes: 60, date: 2026-11-04, time: "17:30"}}]
+  - q: What if traffic is heavier than usual from Elm Park to Northgate on Monday at 9:00 for 90 minutes?
+    expect: [{set_road: {edge: J1_J3, level: busy, minutes: 90, date: 2026-11-09, time: "09:00"}}]
+  - q: More traffic than usual on Ashford Centre to Mill Yard at 21:00 tomorrow for 30 minutes. Effect?
+    expect: [{set_road: {edge: C_J2, level: busy, minutes: 30, date: 2026-11-04, time: "21:00"}}]

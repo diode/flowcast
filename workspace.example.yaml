@@ -1,0 +1,17 @@
+# FlowCast workspace settings: which GPU runs what on YOUR machine.
+# Copy to workspace.yaml (kept local, not shared) and edit. Without a workspace.yaml FlowCast uses the defaults
+# below. Environment variables override the file: FLOWCAST_VISION_GPU, FLOWCAST_GLIMMER_GPU, FLOWCAST_CARLA_GPU,
+# FLOWCAST_ONE_GPU_AT_A_TIME.
+#
+# GPU numbers are nvidia-smi's (PCI bus order): run `nvidia-smi -L` to see them.
+#
+# Typical set-ups:
+#   one GPU, 16 GB or more    vision_gpu: 0, glimmer_gpu: 0   (stop Glimmer while observe runs: 16 GB cannot hold both; untested)
+#   one GPU, under 16 GB      vision_gpu: 0, and choose Muse Spark (Meta Model API) in the dashboard menu
+#   two GPUs                  vision_gpu on one card, glimmer_gpu on the other (Glimmer needs ~15 GB free)
+#   no local GPU for language choose Muse Spark; only SAM 3.1 needs a local GPU (about 6 GB in use on the 12 GB card tested)
+
+vision_gpu: 0              # SAM 3.1: reads the recordings (netstudy observe / ingest)
+glimmer_gpu: 0             # the local Traffic Assistant (llama-server with Muse Glimmer)
+carla_gpu: null            # sample towns only: the card CARLA renders on, by part of its name (null: the vision GPU)
+one_gpu_at_a_time: false   # true if the power supply cannot carry two GPUs under full load together

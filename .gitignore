@@ -1,0 +1,13 @@
+workspace.yaml
+.streamlit/secrets.toml
+.venv/
+data/
+tools/
+models/*.gguf
+models/sam3/*.safetensors
+__pycache__/
+.pytest_cache/
+
+demo
+*.egg-info/
+sample-data/

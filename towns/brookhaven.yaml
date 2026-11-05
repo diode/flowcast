@@ -1,0 +1,212 @@
+# Brookhaven: the medium study city (docs/cities.md). Five junctions round one city centre, right-hand traffic.
+#   netstudy network --sim-config towns/brookhaven.yaml
+#
+#                J1 Hillside
+#             ╱       │       ╲
+#    J5 Lakeview      │      J2 Station Quarter      spokes C-J1..J5   (600 m)
+#         │   ╲       │     ╱   │                    ring J1-J2-J3-J4-J5-J1 (705 m)
+#         │     ╲   ( C )  ╱    │                    cameras: one per edge (32)
+#    J4 Old Mill ──────── J3 Southfield
+#
+# Run as Ashford (docs/implementation-next.md step 5):
+#   netstudy run --sim-config towns/brookhaven.yaml --first 2026-10-05 --days 30
+out_dir: ../data/brookhaven
+seed: 22
+sample_minutes: 5
+
+source:
+  kind: simulation
+  capture: recorded
+  skip_render_read: true              # simulation: SUMO writes the labels instead of people
+  render_days: 1                      # simulation: render the first day (CARLA + vision); the rest in SUMO alone
+  render_cameras: 3                   # the rendered day films 3 cameras picked at random (seed); the rest direct from SUMO
+
+recording:                            # docs/recording.md; 3 cameras filmed on the rendered day
+  fps: 5
+  segment_s: 60
+  windows:
+    # 2.5 h each (since 2026-11-04; was 08:00-08:30, 17:30-18:00, 21:00-21:15). The days after the rendered one
+    # come from SUMO (direct observations, the whole day), so these only bound Predict and the period buttons; the
+    # rendered day was filmed in the old windows and a new rendering would take about 10 h per day.
+    - {period: morning, start: "08:30", end: "11:00", light: morning}
+    - {period: noon, start: "12:30", end: "15:00", light: noon}
+    - {period: evening, start: "17:00", end: "19:30", light: evening}
+    - {period: night, start: "20:30", end: "23:00", light: night}
+  exposure:                           # Ashford's calibration (same CARLA lights); recheck: check_carla_world.py --calibrate
+    morning: {exposure_compensation: -0.5}
+    noon: {exposure_compensation: -0.5}
+    evening: {exposure_compensation: 1.5}
+    night: {exposure_compensation: 0.0, exposure_min_bright: 4.0, exposure_max_bright: 4.0}
+
+network:
+  source: town
+  lefthand: false
+  opendrive: true
+  view_m: 60
+  cameras: all
+  town:
+    junctions:                        # pentagon of radius 600 m round the centre
+      C: [0, 0]
+      J1: [0, 600]
+      J2: [571, 185]
+      J3: [353, -485]
+      J4: [-353, -485]
+      J5: [-571, 185]
+    roads:
+      - [C, J1]
+      - [C, J2]
+      - [C, J3]
+      - [C, J4]
+      - [C, J5]
+      - [J1, J2]
+      - [J2, J3]
+      - [J3, J4]
+      - [J4, J5]
+      - [J5, J1]
+    lanes: 2
+    speed_kmh: 50
+    fringe_m: 250
+    neighbourhoods:
+      C: {dir: [0.588, 0.809], length_m: 150}    # between the J1 and J2 spokes, short of the ring road
+    names: {C: Brookhaven Centre, J1: Hillside, J2: Station Quarter, J3: Southfield, J4: Old Mill, J5: Lakeview}
+    # Timing sheet (docs/architecture-next.md 5.1), decoded once from netconvert's plans in net.net.xml by
+    # scripts/decode_signals.py (4 Nov 2026); from now on this is the source: netstudy network gives it to SUMO
+    # and the graph model reads it. Movement <from>><to> by neighbouring junction, hood = in_/out_<J>.
+    signals:
+      C:
+        phases:
+          - {green_s: 16, amber_s: 3, go: [J4>J2, J4>J3, J4>hood, hood>J1, hood>J4, hood>J5], yield: [J4>J1, J4>J5, hood>J2, hood>J3]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [J4>J1, J4>J5, hood>J2, hood>J3]}
+          - {green_s: 18, amber_s: 3, go: [J2>J1, J2>J5, J2>hood, J5>J2], yield: [J2>J3, J2>J4, J5>J1, J5>J3, J5>J4, J5>hood]}
+          - {green_s: 6, amber_s: 3, go: [J2>J4, J5>J1, J5>hood], yield: [J2>J3, J5>J3, J5>J4]}
+          - {green_s: 18, amber_s: 3, go: [J1>J3, J3>J1, J3>J2, J3>hood], yield: [J1>J2, J1>J4, J1>J5, J1>hood, J3>J4, J3>J5]}
+          - {green_s: 6, amber_s: 3, all_red_s: 1, go: [J1>J2, J1>hood, J3>J5], yield: [J1>J4, J1>J5, J3>J4]}
+      J1:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C>J2, C>hood, hood>C, hood>J5], yield: [C>J5, hood>J2]}
+          - {green_s: 37, amber_s: 3, go: [J2>J5, J2>hood, J5>C, J5>J2], yield: [J2>C, J5>hood]}
+          - {green_s: 6, amber_s: 3, go: [J2>C, J5>hood]}
+      J2:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C>J3, C>hood, hood>C, hood>J1], yield: [C>J1, hood>J3]}
+          - {green_s: 37, amber_s: 3, go: [J1>C, J1>J3, J3>J1, J3>hood], yield: [J1>hood, J3>C]}
+          - {green_s: 6, amber_s: 3, go: [J1>hood, J3>C]}
+      J3:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C>J4, C>hood, hood>C, hood>J2], yield: [C>J2, hood>J4]}
+          - {green_s: 37, amber_s: 3, go: [J2>C, J2>J4, J4>J2, J4>hood], yield: [J2>hood, J4>C]}
+          - {green_s: 6, amber_s: 3, go: [J2>hood, J4>C]}
+      J4:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C>J5, C>hood, hood>C, hood>J3], yield: [C>J3, hood>J5]}
+          - {green_s: 37, amber_s: 3, go: [J3>C, J3>J5, J5>J3, J5>hood], yield: [J3>hood, J5>C]}
+          - {green_s: 6, amber_s: 3, go: [J3>hood, J5>C]}
+      J5:
+        phases:
+          - {green_s: 38, amber_s: 3, go: [C>J1, C>hood, hood>C, hood>J4], yield: [C>J4, hood>J1]}
+          - {green_s: 37, amber_s: 3, go: [J1>J4, J1>hood, J4>C, J4>J1], yield: [J1>C, J4>hood]}
+          - {green_s: 6, amber_s: 3, go: [J1>C, J4>hood]}
+
+demand:                               # docs/cities.md: Brookhaven's zones
+  mix: {car: 0.65, two_wheeler: 0.20, bus: 0.05, truck: 0.10}
+  zones:
+    C:                                # ROUTINE: city centre, offices + shops
+      kind: routine
+      name: Brookhaven Centre
+      peak_veh_per_hour: 800
+      day_to_day_sd: 0.05
+      generation:
+        - {from: "07:00", to: "09:00", level: 0.20, days: weekdays}
+        - {from: "09:00", to: "12:30", level: 0.35, days: weekdays}
+        - {from: "12:30", to: "14:00", level: 0.60, days: weekdays}
+        - {from: "14:00", to: "17:00", level: 0.40, days: weekdays}
+        - {from: "17:00", to: "19:30", level: 1.00, days: weekdays}
+        - {from: "19:30", to: "22:00", level: 0.25, days: weekdays}
+        - {from: "10:00", to: "20:00", level: 0.30, days: weekend}
+      attraction:
+        - {from: "07:30", to: "10:00", level: 1.00, days: weekdays}
+        - {from: "10:00", to: "12:30", level: 0.45, days: weekdays}
+        - {from: "12:30", to: "14:00", level: 0.60, days: weekdays}
+        - {from: "14:00", to: "17:00", level: 0.40, days: weekdays}
+        - {from: "17:00", to: "20:00", level: 0.15, days: weekdays}
+        - {from: "10:00", to: "20:00", level: 0.35, days: weekend}
+    J1:                               # ROUTINE: homes
+      kind: routine
+      name: Hillside
+      peak_veh_per_hour: 800
+      day_to_day_sd: 0.05
+      generation:
+        - {from: "06:30", to: "07:30", level: 0.50, days: weekdays}
+        - {from: "07:30", to: "09:30", level: 1.00, days: weekdays}
+        - {from: "09:30", to: "16:00", level: 0.30, days: weekdays}
+        - {from: "16:00", to: "20:00", level: 0.45, days: weekdays}
+        - {from: "20:00", to: "22:00", level: 0.25, days: weekdays}
+        - {from: "09:00", to: "21:00", level: 0.40, days: weekend}
+      attraction:
+        - {from: "07:30", to: "09:00", level: 0.30, days: weekdays}
+        - {from: "09:00", to: "16:30", level: 0.25, days: weekdays}
+        - {from: "16:30", to: "20:30", level: 1.00, days: weekdays}
+        - {from: "20:30", to: "23:00", level: 0.50, days: weekdays}
+        - {from: "09:00", to: "22:00", level: 0.40, days: weekend}
+    J2:                               # ROUTINE: rail station, peaks at train times (every 30 min in the peaks)
+      kind: routine
+      name: Station Quarter
+      peak_veh_per_hour: 700
+      day_to_day_sd: 0.08
+      ramp_minutes: 10
+      generation:
+        - {from: "07:30", to: "07:45", level: 1.00, days: weekdays}
+        - {from: "08:00", to: "08:15", level: 1.00, days: weekdays}
+        - {from: "08:30", to: "08:45", level: 1.00, days: weekdays}
+        - {from: "09:00", to: "16:30", level: 0.30, days: weekdays}
+        - {from: "17:00", to: "17:15", level: 0.90, days: weekdays}
+        - {from: "17:30", to: "17:45", level: 0.90, days: weekdays}
+        - {from: "18:00", to: "18:15", level: 0.90, days: weekdays}
+        - {from: "18:30", to: "21:00", level: 0.30, days: weekdays}
+        - {from: "09:00", to: "21:00", level: 0.30, days: weekend}
+      attraction:
+        - {from: "07:00", to: "07:30", level: 1.00, days: weekdays}
+        - {from: "07:30", to: "09:00", level: 0.70, days: weekdays}
+        - {from: "09:00", to: "16:30", level: 0.25, days: weekdays}
+        - {from: "16:30", to: "19:00", level: 0.60, days: weekdays}
+        - {from: "09:00", to: "21:00", level: 0.25, days: weekend}
+    J3: &random                       # RANDOM: retail park
+      kind: random
+      name: Southfield
+      peak_veh_per_hour: 550
+      base_range: [0.15, 0.6]
+      drift_phi: 0.95
+      drift_sd: 0.12
+      surges_per_day: 3
+      surge_minutes: [15, 120]
+      surge_factor: [1.5, 4.0]
+      mix: {car: 0.75, two_wheeler: 0.15, bus: 0.05, truck: 0.05}
+    J4:                               # RANDOM: industry, more trucks
+      <<: *random
+      name: Old Mill
+      peak_veh_per_hour: 450
+      mix: {car: 0.45, two_wheeler: 0.10, bus: 0.05, truck: 0.40}
+    J5:                               # RANDOM: leisure (a random zone has no weekly pattern: weekend peaks not modelled)
+      <<: *random
+      name: Lakeview
+      peak_veh_per_hour: 500
+      surges_per_day: 4
+      mix: {car: 0.70, two_wheeler: 0.25, bus: 0.05, truck: 0.00}
+
+incidents:
+  per_day: 0.5
+  duration_min: [20, 60]
+
+whatif_labels:                        # simulation only: paired SUMO runs, the answer key for road changes (scoring only)
+  days: 3                             # the last N working days (the graph model is fitted on the days before them)
+  cases:                              # all inside the filmed windows (Predict refuses other times)
+    - {edge: J1_C, level: jammed, start: "08:00", minutes: 60}    # Hillside -> Centre, morning peak
+    - {edge: J1_C, level: closed, start: "08:00", minutes: 60}
+    - {edge: C_J2, level: closed, start: "17:30", minutes: 60}    # Centre -> Station Quarter, evening peak
+    - {edge: J1_J2, level: closed, start: "08:00", minutes: 90}   # ring road, detour by the centre
+    - {edge: J3_C, level: slow, start: "17:30", minutes: 60}      # Southfield -> Centre
+    - {edge: out_C, level: busy, start: "17:30", minutes: 30}     # no way round
+
+predict:                              # architecture-next 1.6
+  engine: graph                       # graph | sumo (refused: SUMO only makes sample data)
+  assist: glimmer                     # glimmer (local) | muse_spark (Meta Model API) | off (the form only); menu chooses
